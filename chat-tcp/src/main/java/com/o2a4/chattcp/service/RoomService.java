@@ -114,6 +114,38 @@ public class RoomService {
         log.info("자리 양도 종료 호출");
         String userId = seat.getUserId();
         String winnerId = seat.getWinnerId();
+        String time = LocalDateTime.now().toString();
+
+        // filterMessage가 Mono<String>을 반환하는 경우
+        Mono.defer(() -> messageService.filterMessage(seat.getContent()))    // 위치 정보에서 비속어 필터링
+                .flatMap(place -> {
+                    Transfer.Builder builder = Transfer.newBuilder()
+                            .setType("seat-win")
+                            .setContent(place)
+                            .setUserId(userId)
+                            .setSendAt(time);
+
+                    Transfer.Builder b2 = Transfer.newBuilder(builder.build())
+                            .setType("seat-end")
+                            .setContent("");
+
+                    return redisTemplate.opsForHash().get(uPrefix + winnerId, "channel")
+                            .doOnNext(c -> {
+                                // 당첨자 메시지 전송
+                                log.info("SEND MESSAGE TO USER");
+                                cidcRepo.getChannelIdChannelMap().get(c).writeAndFlush(builder.build());
+                            }).flatMap(c ->
+                                    redisTemplate.opsForHash().get(uPrefix + userId, "channelGroup")
+                                            .doOnNext(cg -> {
+                                                // 채팅방에 메시지 전송
+                                                log.info("SEND MESSAGE TO ROOM");
+                                                cidcRepo.getChannelIdChannelMap().get(c).flush();
+                                                tcgRepo.getTrainChannelGroupMap().get(cg).writeAndFlush(b2.build());
+                                            }));
+                }).subscribe();
+
+/*
+        // filterMessage가 String을 반환하는 기존 상태
         // 위치 정보에서 비속어 필터링
         String place = messageService.filterMessage(seat.getContent());
         String time = LocalDateTime.now().toString();
@@ -144,6 +176,7 @@ public class RoomService {
                                 })
                 )
                 .subscribe();
+*/
 
         // 이 형태는 2개 합친거 & 뒤에거 전송
 //        // 당첨자 메시지 전송

@@ -117,6 +117,17 @@ public class ChatHandler extends ChannelInboundHandlerAdapter {
         try {
             switch (trans.getType()) {
                 case "msg":
+                    // filterMessage가 Mono<String>을 반환할 때
+                    Mono sendMessage = Mono.just(trans).flatMap(t -> {
+                        log.info("msg in : {}", trans.getContent());
+                        return messageService.filterMessage(trans.getContent());
+                    }).doOnNext(msg -> {
+                        log.info("msg filtered : {}", msg);
+                        messageService.sendMessage(trans, msg);
+                    }).subscribeOn(Schedulers.parallel());
+
+                    /*
+                    // filterMessage가 String을 반환할 때
                     Mono sendMessage = Mono.just(trans).map(t -> {
                         log.info("msg in : {}", trans.getContent());
 
@@ -125,6 +136,7 @@ public class ChatHandler extends ChannelInboundHandlerAdapter {
                         log.info("msg filtered : {}", msg);
                         messageService.sendMessage(trans, msg);
                     }).subscribeOn(Schedulers.parallel());
+                    */
 
                     Mono kafkaSend = Mono.just(trans).map(t -> {
                         /*kafka 로 보낼 메시지 생성 */

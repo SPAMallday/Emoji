@@ -44,7 +44,7 @@ server:
   port: ${server.port}
   netty:
     bossCount: '1'
-    workerCount: '64'
+    workerCount: '16'
     backlog: '512'
     transfer:
 #      port: '8102'
