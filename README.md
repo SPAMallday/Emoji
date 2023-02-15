@@ -14,7 +14,9 @@
 
 - Back-end
 
-  > *Spring 2.7.5*
+  > *Spring Boot 2.7.5*
+  >
+  > *Spring Webflux 5.3.x (Netty 4.1)*
   >
   > *Java 1.8*
   >
